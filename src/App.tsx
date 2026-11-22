@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./App.css";
 import { hashContent } from "./utils/crypto.ts";
 import { downloadBlob, downloadText } from "./utils/download.ts";
 import {
@@ -139,196 +140,225 @@ function App() {
   }
 
   return (
-    <main>
-      <h1>Secure Packager</h1>
-      <p>Encrypt a message, then recover and verify it in this browser.</p>
+    <main className="app">
+      <header className="app-header">
+        <h1>Secure Packager</h1>
+        <p>Encrypt a message or file, then recover and verify it in this browser.</p>
+      </header>
 
-      <label htmlFor="message">Your Message</label>
-
-      <textarea
-        id="message"
-        value={message}
-        onChange={(event) => {
-          setMessage(event.target.value);
-          resetEncryptionResults();
-        }}
-        placeholder="Enter a message you wish to encrypt"
-        rows={6}
-        disabled={isProcessing}
-      />
-
-      <p>Characters: {message.length}</p>
-
-      <button
-        type="button"
-        onClick={handleHash}
-        disabled={isProcessing || message.length === 0}
-      >
-        {isHashing ? "Calculating..." : "Calculate SHA-256"}
-      </button>
-
-      <button
-        type="button"
-        onClick={handleEncrypt}
-        disabled={isProcessing || message.length === 0}
-      >
-        {isEncrypting ? "Verifying..." : "Encrypt, decrypt, and verify"}
-      </button>
-
-      {error && <p role="alert">{error}</p>}
-
-      {integrityVerified && (
-        <section aria-live="polite">
-          <h2>Integrity Verified</h2>
-          <p>The decrypted message matches the original.</p>
-
-          <h3>Recovered Message</h3>
-          <p style={{ whiteSpace: "pre-wrap" }}>{recoveredMessage}</p>
-        </section>
-      )}
-
-      {hash && (
-        <section aria-live="polite">
-          <h2>SHA-256 Hash</h2>
-          <code style={{ overflowWrap: "anywhere" }}>{hash}</code>
-        </section>
-      )}
-
-      {encryptedPackage && exportedKey && (
-        <section>
-          <h2>Download your encrypted message</h2>
-
-          <button
-            type="button"
-            onClick={() =>
-              downloadText(
-                JSON.stringify(encryptedPackage, null, 2),
-                "content.secure.json",
-                "application/json"
-              )
-            }
-          >
-            Download encrypted package
-          </button>
-
-          <button
-            type="button"
-            onClick={() => downloadText(exportedKey, "content.key.txt")}
-          >
-            Download key
-          </button>
-
-          <p>
-            Keep your key private. Anyone with both files can decrypt
-            the message.
-          </p>
-        </section>
-      )}
-
-      <section>
-        <h2>Open an encrypted package</h2>
-        <p>Select an encrypted package and its matching key file.</p>
-
-        <div>
-          <label htmlFor="package-file">Encrypted package</label>
-          <input
-            id="package-file"
-            type="file"
-            accept=".json"
-            disabled={isDecrypting}
-            onChange={(event) => {
-              setPackageFile(event.target.files?.[0] ?? null);
-              resetImportResults();
-            }}
-          />
+      <section className="panel" aria-labelledby="create-heading">
+        <div className="section-heading">
+          <h2 id="create-heading">Create an encrypted package</h2>
+          <p>Start with a message or choose a file.</p>
         </div>
 
-        <div>
-          <label htmlFor="key-file">Key file</label>
-          <input
-            id="key-file"
-            type="file"
-            accept=".txt"
-            disabled={isDecrypting}
-            onChange={(event) => {
-              setKeyFile(event.target.files?.[0] ?? null);
-              resetImportResults();
-            }}
-          />
-        </div>
+        <div className="encrypt-options">
+          <section className="input-section" aria-labelledby="message-heading">
+            <h3 id="message-heading">Encrypt a message</h3>
+            <div className="field">
+              <label htmlFor="message">Your message</label>
+              <textarea
+                id="message"
+                value={message}
+                onChange={(event) => {
+                  setMessage(event.target.value);
+                  resetEncryptionResults();
+                }}
+                placeholder="Enter a message you wish to encrypt"
+                rows={6}
+                disabled={isProcessing}
+                aria-describedby="character-count"
+              />
+              <p id="character-count" className="field-hint">Characters: {message.length}</p>
+            </div>
 
-        <button
-          type="button"
-          onClick={handleDecryptPackage}
-          disabled={isDecrypting || !packageFile || !keyFile}
-        >
-          {isDecrypting ? "Decrypting..." : "Decrypt and verify package"}
-        </button>
+            <div className="actions">
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handleEncrypt}
+                disabled={isProcessing || message.length === 0}
+              >
+                {isEncrypting ? "Verifying..." : "Encrypt and verify"}
+              </button>
+              <button
+                type="button"
+                onClick={handleHash}
+                disabled={isProcessing || message.length === 0}
+              >
+                {isHashing ? "Calculating..." : "Calculate SHA-256"}
+              </button>
+            </div>
+          </section>
 
-        {decryptError && <p role="alert">{decryptError}</p>}
+          <section className="input-section" aria-labelledby="file-heading">
+            <h3 id="file-heading">Encrypt a file</h3>
+            <div className="field">
+              <label htmlFor="source-file">File to encrypt</label>
+              <input
+                id="source-file"
+                type="file"
+                disabled={isProcessing}
+                aria-describedby="file-limit"
+                onChange={(event) => {
+                  setSelectedFile(event.target.files?.[0] ?? null);
+                  resetEncryptionResults();
+                }}
+              />
+              <p id="file-limit" className="field-hint">Choose a file up to 5 MiB.</p>
+            </div>
 
-        {importVerified && (
-          <section aria-live="polite">
-            <h3>Integrity verified</h3>
-            <p>The recovered content matches the hash inside the package.</p>
-
-            {recoveredFile ? (
-              <>
-                <h4>Recovered file</h4>
-                <p>{recoveredFilename}</p>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadBlob(recoveredFile, recoveredFilename)
-                  }
-                >
-                  Download recovered file
-                </button>
-              </>
-            ) : (
-              <>
-                <h4>Recovered message</h4>
-                <p style={{ whiteSpace: "pre-wrap" }}>{importedMessage}</p>
-              </>
+            {selectedFile && (
+              <p className="file-details">
+                {selectedFile.name} · {selectedFile.size.toLocaleString()} bytes
+              </p>
             )}
 
-            <h4>Verified SHA-256 hash</h4>
-            <code style={{ overflowWrap: "anywhere" }}>{importedHash}</code>
+            <div className="actions">
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handleEncryptFile}
+                disabled={isProcessing || !selectedFile}
+              >
+                {isEncrypting ? "Processing..." : "Encrypt file"}
+              </button>
+            </div>
+          </section>
+        </div>
+
+        {error && <p className="feedback" role="alert">{error}</p>}
+
+        {(hash || (encryptedPackage && exportedKey)) && (
+          <section className="results" aria-label="Encryption results" aria-live="polite">
+            {integrityVerified && (
+              <div className="result-block">
+                <h3>Integrity verified</h3>
+                <p>The decrypted message matches the original.</p>
+                <h4>Recovered message</h4>
+                <p className="message-content">{recoveredMessage}</p>
+              </div>
+            )}
+
+            {hash && (
+              <div className="result-block">
+                <h3>SHA-256 hash</h3>
+                <code className="hash-value">{hash}</code>
+              </div>
+            )}
+
+            {encryptedPackage && exportedKey && (
+              <div className="result-block">
+                <h3>Download your package and key</h3>
+                <div className="actions">
+                  <button
+                    type="button"
+                    onClick={() => downloadText(
+                      JSON.stringify(encryptedPackage, null, 2),
+                      "content.secure.json",
+                      "application/json",
+                    )}
+                  >
+                    Download encrypted package
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadText(exportedKey, "content.key.txt")}
+                  >
+                    Download key
+                  </button>
+                </div>
+                <p className="field-hint">
+                  Keep your key private. Anyone with both files can decrypt the content.
+                </p>
+              </div>
+            )}
           </section>
         )}
       </section>
 
-      <section>
-        <h2>Encrypt a file</h2>
-        <p>Select a file of up to 5 MiB.</p>
+      <section className="panel" aria-labelledby="open-heading">
+        <div className="section-heading">
+          <h2 id="open-heading">Open an encrypted package</h2>
+          <p>Select a package and its matching key to recover your content.</p>
+        </div>
 
-        <label htmlFor="source-file">File to encrypt</label>
-        <input
-          id="source-file"
-          type="file"
-          disabled={isProcessing}
-          onChange={(event) => {
-            setSelectedFile(event.target.files?.[0] ?? null);
-            resetEncryptionResults();
-          }}
-        />
+        <div className="upload-fields">
+          <div className="field">
+            <label htmlFor="package-file">Encrypted package</label>
+            <input
+              id="package-file"
+              type="file"
+              accept=".json"
+              disabled={isDecrypting}
+              onChange={(event) => {
+                setPackageFile(event.target.files?.[0] ?? null);
+                resetImportResults();
+              }}
+            />
+          </div>
 
-        {selectedFile && (
-          <p>
-            Selected: {selectedFile.name}
-            {" — "}
-            {selectedFile.size.toLocaleString()} bytes
-          </p>
+          <div className="field">
+            <label htmlFor="key-file">Key file</label>
+            <input
+              id="key-file"
+              type="file"
+              accept=".txt"
+              disabled={isDecrypting}
+              onChange={(event) => {
+                setKeyFile(event.target.files?.[0] ?? null);
+                resetImportResults();
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="actions">
+          <button
+            className="primary-button"
+            type="button"
+            onClick={handleDecryptPackage}
+            disabled={isDecrypting || !packageFile || !keyFile}
+          >
+            {isDecrypting ? "Decrypting..." : "Decrypt and verify package"}
+          </button>
+        </div>
+
+        {decryptError && <p className="feedback" role="alert">{decryptError}</p>}
+
+        {importVerified && (
+          <section className="results" aria-live="polite">
+            <div className="result-block">
+              <h3>Integrity verified</h3>
+              <p>The recovered content matches the hash inside the package.</p>
+
+              {recoveredFile ? (
+                <>
+                  <h4>Recovered file</h4>
+                  <p className="file-details">{recoveredFilename}</p>
+                  <div className="actions">
+                    <button
+                      type="button"
+                      onClick={() => downloadBlob(recoveredFile, recoveredFilename)}
+                    >
+                      Download recovered file
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h4>Recovered message</h4>
+                  <p className="message-content">{importedMessage}</p>
+                </>
+              )}
+            </div>
+
+            <div className="result-block">
+              <h3>Verified SHA-256 hash</h3>
+              <code className="hash-value">{importedHash}</code>
+            </div>
+          </section>
         )}
-
-        <button
-          type="button"
-          onClick={handleEncryptFile}
-          disabled={isProcessing || !selectedFile}
-        >
-          {isEncrypting ? "Processing..." : "Encrypt file"}
-        </button>
       </section>
     </main>
   );
