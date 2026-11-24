@@ -10,7 +10,7 @@ import {
 } from "./crypto.ts";
 
 const MIB = 1024 * 1024;
-const MAX_FILE_SIZE = 5 * MIB;
+const MAX_FILE_SIZE = 4 * MIB;
 const MAX_PACKAGE_SIZE = 8 * MIB;
 const MAX_KEY_SIZE = 1024;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -51,6 +51,16 @@ function parsePackage(text: string): EncryptedPackage {
   };
 }
 
+// Downloads use pretty-printed JSON, so measure that exact representation.
+function ensureImportableSize(encryptedPackage: EncryptedPackage): void {
+  const packageBytes = new TextEncoder().encode(
+    JSON.stringify(encryptedPackage, null, 2),
+  ).byteLength;
+  if (packageBytes > MAX_PACKAGE_SIZE) {
+    throw new Error("Encrypted package exceeds the 8 MiB import limit.");
+  }
+}
+
 async function encryptPayload(payload: object) {
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   const key = await generateKey();
@@ -62,6 +72,8 @@ async function encryptPayload(payload: object) {
     iv: bytesToBase64(iv),
     ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
   };
+
+  ensureImportableSize(encryptedPackage);
 
   return { encryptedPackage, key, iv, ciphertext };
 }
@@ -145,7 +157,7 @@ export async function createMessagePackage(message: string) {
 
 export async function createFilePackage(file: File) {
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error("Please select a file of 5 MiB or smaller.");
+    throw new Error("Please select a file of 4 MiB or smaller.");
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());

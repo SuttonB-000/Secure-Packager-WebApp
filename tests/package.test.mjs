@@ -122,9 +122,32 @@ test('size checks reject oversized uploads before parsing or encrypting', async 
   const emptyFile = new File([], 'empty');
   const largePackage = new File([new Uint8Array(8 * 1024 * 1024 + 1)], 'large.json');
   const largeKey = new File([new Uint8Array(1025)], 'large.key.txt');
-  const largeSource = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.bin');
+  const largeSource = new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'large.bin');
 
   await assert.rejects(openUploadedPackage(largePackage, emptyFile), /too large/);
   await assert.rejects(openUploadedPackage(emptyFile, largeKey), /too large/);
-  await assert.rejects(createFilePackage(largeSource), /5 MiB or smaller/);
+  await assert.rejects(createFilePackage(largeSource), /4 MiB or smaller/);
+});
+
+test('the largest supported file produces a package the importer can reopen', async () => {
+  const bytes = new Uint8Array(4 * 1024 * 1024);
+  const result = await createFilePackage(new File([bytes], 'limit.bin'));
+  const [, keyFile] = uploadFiles(result);
+  const downloadedPackage = new File(
+    [JSON.stringify(result.encryptedPackage, null, 2)],
+    'content.secure.json',
+  );
+
+  assert.ok(downloadedPackage.size <= 8 * 1024 * 1024);
+  const recovered = await openUploadedPackage(downloadedPackage, keyFile);
+  assert.equal(recovered.kind, 'file');
+  assert.equal(recovered.file.size, bytes.byteLength);
+  assert.equal(recovered.hash, await hashContent(bytes));
+});
+
+test('creation rejects messages whose downloaded package exceeds the import limit', async () => {
+  await assert.rejects(
+    createMessagePackage('x'.repeat(6 * 1024 * 1024)),
+    /8 MiB import limit/,
+  );
 });

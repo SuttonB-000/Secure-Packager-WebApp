@@ -79,8 +79,12 @@ function App() {
       setHash(result.hash);
       setRecoveredMessage(result.message);
       setIntegrityVerified(true);
-    } catch {
-      setError("Could not encrypt, decrypt, or verify the message.");
+    } catch (error) {
+      setError(
+        error instanceof Error && error.message.includes("8 MiB import limit")
+          ? "This message would create a package larger than 8 MiB. Use a shorter message."
+          : "Could not encrypt, decrypt, or verify the message.",
+      );
     } finally {
       setIsEncrypting(false);
     }
@@ -132,7 +136,7 @@ function App() {
       setDecryptError(
         "Could not decrypt and verify this package. The key may be incorrect, " +
         "or the files may be damaged or unsupported. Packages must be 8 MiB " +
-        "or smaller, keys 1 KiB or smaller, and recovered files 5 MiB or smaller.",
+        "or smaller, keys 1 KiB or smaller, and recovered files 4 MiB or smaller.",
       );
     } finally {
       setIsDecrypting(false);
@@ -205,7 +209,7 @@ function App() {
                   resetEncryptionResults();
                 }}
               />
-              <p id="file-limit" className="field-hint">Choose a file up to 5 MiB.</p>
+              <p id="file-limit" className="field-hint">Choose a file up to 4 MiB.</p>
             </div>
 
             {selectedFile && (
